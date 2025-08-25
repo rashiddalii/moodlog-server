@@ -1,11 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const config = require('../config/config');
 
-// Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
       return res.status(401).json({ 
@@ -14,9 +14,8 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.JWT_SECRET);
     
-    // Find user and attach to request
     const user = await User.findById(decoded.userId).select('-password');
     if (!user) {
       return res.status(401).json({ 
@@ -47,14 +46,13 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Optional authentication - doesn't fail if no token
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, config.JWT_SECRET);
       const user = await User.findById(decoded.userId).select('-password');
       if (user) {
         req.user = user;
@@ -62,44 +60,28 @@ const optionalAuth = async (req, res, next) => {
     }
     next();
   } catch (error) {
-    // Continue without authentication
     next();
   }
 };
 
-// Generate JWT token
 const generateToken = (userId) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required');
-  }
-  
   return jwt.sign(
     { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    config.JWT_SECRET,
+    { expiresIn: config.JWT_EXPIRE }
   );
 };
 
-// Generate refresh token
 const generateRefreshToken = () => {
-  if (!process.env.JWT_REFRESH_SECRET) {
-    throw new Error('JWT_REFRESH_SECRET environment variable is required');
-  }
-  
   return jwt.sign(
     {},
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: '30d' }
+    config.JWT_REFRESH_SECRET,
+    { expiresIn: config.JWT_REFRESH_EXPIRE }
   );
 };
 
-// Verify refresh token
 const verifyRefreshToken = (refreshToken) => {
-  if (!process.env.JWT_REFRESH_SECRET) {
-    throw new Error('JWT_REFRESH_SECRET environment variable is required');
-  }
-  
-  return jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  return jwt.verify(refreshToken, config.JWT_REFRESH_SECRET);
 };
 
 module.exports = {

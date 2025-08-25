@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const config = require('../config/config');
 
 const userSchema = new mongoose.Schema({
-  // Anonymous user - no personal information required
   username: {
     type: String,
     required: true,
@@ -16,23 +16,19 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
-  // Optional: user can provide a display name
   displayName: {
     type: String,
     trim: true,
     maxlength: 30
   },
-  // Track when user joined
   createdAt: {
     type: Date,
     default: Date.now
   },
-  // Track last login
   lastLogin: {
     type: Date,
     default: Date.now
   },
-  // Store refresh tokens for session management
   refreshTokens: [{
     token: String,
     createdAt: {
@@ -44,12 +40,11 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(config.BCRYPT_ROUNDS);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -57,12 +52,10 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to generate anonymous username
 userSchema.statics.generateAnonymousUsername = function() {
   const adjectives = ['Happy', 'Calm', 'Peaceful', 'Hopeful', 'Brave', 'Strong', 'Gentle', 'Wise'];
   const nouns = ['Soul', 'Heart', 'Spirit', 'Mind', 'Dreamer', 'Warrior', 'Friend', 'Traveler'];
