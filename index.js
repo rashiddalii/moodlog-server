@@ -27,6 +27,7 @@ const storyRoutes = require('./routes/stories');
 app.use('/api/auth', authRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/stories', storyRoutes);
+app.use('/api/ai', require('./routes/ai'));
 
 
 app.get('/', (req, res) => {

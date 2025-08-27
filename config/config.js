@@ -11,7 +11,8 @@ const config = {
   AUTH_RATE_LIMIT: 5,
   API_RATE_LIMIT: 100,
   BCRYPT_ROUNDS: 12,
-  MAX_REQUEST_SIZE: '10mb'
+  MAX_REQUEST_SIZE: '10mb',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY
 };
 
 module.exports = config;
