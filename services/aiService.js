@@ -7,6 +7,7 @@ class AIService {
   async analyzeMoodFromText(text) {
     try {
       if (!config.GEMINI_API_KEY || config.GEMINI_API_KEY === 'your_gemini_api_key_here') {
+        console.log('No Gemini API key configured, returning default mood');
         return 3; // Default neutral if no API key
       }
 
@@ -21,11 +22,21 @@ Number:`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const moodScore = parseInt(response.text().trim());
+      const responseText = response.text().trim();
+      const moodScore = parseInt(responseText);
       
-      return isNaN(moodScore) || moodScore < 1 || moodScore > 5 ? 3 : moodScore;
+      console.log('AI mood analysis result:', { text: text.substring(0, 50), responseText, moodScore });
+      
+      // Validate the response
+      if (isNaN(moodScore) || moodScore < 1 || moodScore > 5) {
+        console.log('Invalid mood score from AI, using default');
+        return 3;
+      }
+      
+      return moodScore;
     } catch (error) {
       console.error('AI mood analysis error:', error.message);
+      console.error('Error details:', error);
       return 3; // Default to neutral
     }
   }

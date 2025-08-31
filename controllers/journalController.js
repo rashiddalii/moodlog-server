@@ -3,7 +3,9 @@ const JournalEntry = require('../models/JournalEntry');
 class JournalController {
   async createOrUpdateEntry(req, res) {
     try {
-      const { content, mood, moodEmoji, tags } = req.body;
+      const { content, mood, moodEmoji, tags, date } = req.body;
+      
+      console.log('Journal entry request:', { content: content?.substring(0, 50), mood, moodEmoji, date });
 
       if (!content || !mood) {
         return res.status(400).json({ 
@@ -26,16 +28,34 @@ class JournalController {
         });
       }
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use provided date or default to today
+      let targetDate;
+      if (date) {
+        targetDate = new Date(date);
+        if (isNaN(targetDate.getTime())) {
+          return res.status(400).json({ 
+            message: 'Invalid date format',
+            code: 'INVALID_DATE'
+          });
+        }
+      } else {
+        targetDate = new Date();
+      }
+      
+      targetDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
 
+      console.log('Looking for entry with date range:', { targetDate, nextDay });
+      
       let entry = await JournalEntry.findOne({
         user: req.user._id,
         date: {
-          $gte: today,
-          $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          $gte: targetDate,
+          $lt: nextDay
         }
       });
+
+      console.log('Found existing entry:', entry ? 'Yes' : 'No');
 
       if (entry) {
         entry.addEditHistory();
@@ -47,6 +67,7 @@ class JournalController {
       } else {
         entry = new JournalEntry({
           user: req.user._id,
+          date: targetDate,
           content,
           mood,
           moodEmoji,

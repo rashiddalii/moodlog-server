@@ -56,9 +56,14 @@ class AuthController {
         });
       }
 
-      user.refreshTokens.push({ token: refreshToken });
-      user.lastLogin = new Date();
-      await user.save();
+      // Use atomic update to avoid VersionError
+      await User.findByIdAndUpdate(
+        user._id,
+        {
+          $push: { refreshTokens: { token: refreshToken, createdAt: new Date() } },
+          $set: { lastLogin: new Date() }
+        }
+      );
 
       res.status(201).json({
         message: 'User registered successfully',
@@ -139,8 +144,13 @@ class AuthController {
         });
       }
 
-      user.refreshTokens.push({ token: refreshToken });
-      await user.save();
+      // Use atomic update to avoid VersionError
+      await User.findByIdAndUpdate(
+        user._id,
+        {
+          $push: { refreshTokens: { token: refreshToken, createdAt: new Date() } }
+        }
+      );
 
       res.status(201).json({
         message: 'Anonymous account created successfully',
@@ -202,9 +212,14 @@ class AuthController {
         });
       }
 
-      user.refreshTokens.push({ token: refreshToken });
-      user.lastLogin = new Date();
-      await user.save();
+      // Use atomic update to avoid VersionError
+      await User.findByIdAndUpdate(
+        user._id,
+        {
+          $push: { refreshTokens: { token: refreshToken, createdAt: new Date() } },
+          $set: { lastLogin: new Date() }
+        }
+      );
 
       res.json({
         message: 'Login successful',
@@ -241,23 +256,25 @@ class AuthController {
 
       const decoded = verifyRefreshToken(refreshToken);
       
-      const user = await User.findOne({
-        'refreshTokens.token': refreshToken
-      });
+      // Use atomic update to avoid VersionError
+      const newRefreshToken = generateRefreshToken();
+      const newToken = generateToken(decoded.userId);
 
-      if (!user) {
+      const result = await User.findOneAndUpdate(
+        { 'refreshTokens.token': refreshToken },
+        {
+          $pull: { refreshTokens: { token: refreshToken } },
+          $push: { refreshTokens: { token: newRefreshToken, createdAt: new Date() } }
+        },
+        { new: true, runValidators: true }
+      );
+
+      if (!result) {
         return res.status(401).json({ 
           message: 'Invalid refresh token',
           code: 'INVALID_REFRESH_TOKEN'
         });
       }
-
-      const newToken = generateToken(user._id);
-      const newRefreshToken = generateRefreshToken();
-
-      user.refreshTokens = user.refreshTokens.filter(rt => rt.token !== refreshToken);
-      user.refreshTokens.push({ token: newRefreshToken });
-      await user.save();
 
       res.json({
         message: 'Token refreshed successfully',
@@ -340,10 +357,11 @@ class AuthController {
       const { refreshToken } = req.body;
 
       if (refreshToken) {
-        req.user.refreshTokens = req.user.refreshTokens.filter(
-          rt => rt.token !== refreshToken
+        // Use atomic update to avoid VersionError
+        await User.findByIdAndUpdate(
+          req.user._id,
+          { $pull: { refreshTokens: { token: refreshToken } } }
         );
-        await req.user.save();
       }
 
       res.json({ message: 'Logout successful' });

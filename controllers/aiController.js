@@ -14,6 +14,15 @@ class AIController {
 
       const suggestedMood = await aiService.analyzeMoodFromText(content);
 
+      // Ensure we always return a valid mood number
+      if (typeof suggestedMood !== 'number' || suggestedMood < 1 || suggestedMood > 5) {
+        console.log('Invalid mood returned from AI service, using default');
+        return res.json({
+          suggestedMood: 3,
+          message: 'Mood analysis completed (using default)'
+        });
+      }
+
       res.json({
         suggestedMood,
         message: 'Mood analysis completed'
@@ -21,9 +30,10 @@ class AIController {
 
     } catch (error) {
       console.error('AI mood analysis error:', error);
-      res.status(500).json({ 
-        message: 'Failed to analyze mood',
-        code: 'AI_ANALYSIS_ERROR'
+      // Return a default mood instead of an error
+      res.json({
+        suggestedMood: 3,
+        message: 'Mood analysis failed, using default mood'
       });
     }
   }

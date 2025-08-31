@@ -77,6 +77,13 @@ app.use((err, req, res, next) => {
     });
   }
   
+  if (err.name === 'VersionError') {
+    return res.status(409).json({
+      message: 'Document was modified by another request. Please try again.',
+      code: 'VERSION_CONFLICT'
+    });
+  }
+  
   res.status(err.status || 500).json({
     message: config.NODE_ENV === 'production' ? 'Internal server error' : err.message,
     code: 'INTERNAL_ERROR'
